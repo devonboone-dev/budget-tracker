@@ -2,3 +2,5 @@ transactions.csv
 __pycache__/
 *.pyc
 .venv
+budget_tracker.db
+transactions.csv
