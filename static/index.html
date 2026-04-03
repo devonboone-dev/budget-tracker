@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Budget Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #0e0f11;
+      --surface:   #16181c;
+      --border:    #2a2d35;
+      --accent:    #c8f564;
+      --danger:    #ff5f5f;
+      --warning:   #ffbe42;
+      --text:      #e8eaf0;
+      --muted:     #6b7080;
+      --income:    #c8f564;
+      --expense:   #ff5f5f;
+      --radius:    12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--accent);
+    }
+    header span {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── STAT CARDS ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: var(--accent); }
+    .stat-card .label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+    }
+    .stat-card .value {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.9rem;
+      font-weight: 800;
+    }
+    .stat-card.income  .value { color: var(--income); }
+    .stat-card.expense .value { color: var(--expense); }
+    .stat-card.balance .value { color: var(--text); }
+    .stat-card .tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(200,245,100,0.1);
+      color: var(--accent);
+    }
+    .stat-card .tag.over { background: rgba(255,95,95,0.1); color: var(--expense); }
+
+    /* ── BUDGET BAR ── */
+    .budget-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 32px;
+    }
+    .budget-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .budget-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .budget-header .budget-meta { font-size: 0.75rem; color: var(--muted); }
+    .budget-bar-track {
+      background: var(--border);
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .budget-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--accent);
+      transition: width 0.6s ease, background 0.3s;
+    }
+    .budget-bar-fill.warning { background: var(--warning); }
+    .budget-bar-fill.over    { background: var(--expense); }
+    .budget-stats {
+      display: flex;
+      gap: 24px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .budget-stats span b { color: var(--text); }
+    #set-budget-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #set-budget-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ── FORM ── */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: sticky;
+      top: 82px;
+    }
+    .form-card h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--accent);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      -webkit-appearance: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: var(--accent); }
+    .form-group select option { background: var(--surface); }
+
+    /* type toggle */
+    .type-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .type-btn {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .type-btn.active.income  { border-color: var(--income);  background: rgba(200,245,100,0.08); color: var(--income); }
+    .type-btn.active.expense { border-color: var(--expense); background: rgba(255,95,95,0.08);  color: var(--expense); }
+
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #0e0f11;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .submit-btn:hover   { opacity: 0.9; }
+    .submit-btn:active  { transform: scale(0.98); }
+
+    /* ── TRANSACTIONS TABLE ── */
+    .transactions-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .transactions-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .transactions-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .filter-row input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.75rem;
+      padding: 6px 10px;
+      outline: none;
+      width: 130px;
+    }
+    .filter-row input:focus { border-color: var(--accent); }
+    .clear-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.72rem;
+      padding: 6px 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .clear-btn:hover { border-color: var(--muted); color: var(--text); }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead tr { border-bottom: 1px solid var(--border); }
+    thead th {
+      text-align: left;
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 12px 16px;
+      font-weight: 500;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody td {
+      padding: 13px 16px;
+      font-size: 0.8rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 500;
+    }
+    .badge.income  { background: rgba(200,245,100,0.1); color: var(--income); }
+    .badge.expense { background: rgba(255,95,95,0.1);  color: var(--expense); }
+    .cat-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      background: rgba(255,255,255,0.05);
+      color: var(--muted);
+    }
+    .amount-cell { font-weight: 500; }
+    .amount-cell.income  { color: var(--income); }
+    .amount-cell.expense { color: var(--expense); }
+    .action-btns { display: flex; gap: 6px; }
+    .action-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      padding: 4px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .action-btn:hover           { color: var(--text); border-color: var(--muted); }
+    .action-btn.del:hover       { color: var(--expense); border-color: var(--expense); }
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 380px;
+      max-width: 90vw;
+    }
+    .modal h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .modal-actions button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-cancel {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+    .btn-confirm {
+      background: var(--accent);
+      border: none;
+      color: #0e0f11;
+      font-weight: 700;
+    }
+    .btn-confirm:hover { opacity: 0.9; }
+    .btn-danger {
+      background: var(--expense);
+      border: none;
+      color: #fff;
+      font-weight: 700;
+    }
+    .btn-danger:hover { opacity: 0.9; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 0.8rem;
+      color: var(--accent);
+      z-index: 300;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { border-color: var(--expense); color: var(--expense); }
+
+    @media (max-width: 768px) {
+      .stats { grid-template-columns: 1fr; }
+      .main-grid { grid-template-columns: 1fr; }
+      .form-card { position: static; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>// budget tracker</h1>
+  <span id="current-month-label"></span>
+</header>
+
+<div class="container">
+
+  <!-- STAT CARDS -->
+  <div class="stats">
+    <div class="stat-card income">
+      <div class="label">Total Income</div>
+      <div class="value" id="stat-income">$0.00</div>
+      <div class="tag">+ inflow</div>
+    </div>
+    <div class="stat-card expense">
+      <div class="label">Total Expenses</div>
+      <div class="value" id="stat-expenses">$0.00</div>
+      <div class="tag">- outflow</div>
+    </div>
+    <div class="stat-card balance">
+      <div class="label">Balance</div>
+      <div class="value" id="stat-balance">$0.00</div>
+      <div class="tag" id="stat-status">on track</div>
+    </div>
+  </div>
+
+  <!-- BUDGET BAR -->
+  <div class="budget-section">
+    <div class="budget-header">
+      <h2>Monthly Budget</h2>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <span class="budget-meta" id="budget-pct-label">No budget set</span>
+        <button id="set-budget-btn">Set Budget</button>
+      </div>
+    </div>
+    <div class="budget-bar-track">
+      <div class="budget-bar-fill" id="budget-bar" style="width:0%"></div>
+    </div>
+    <div class="budget-stats">
+      <span>Spent: <b id="budget-spent">$0.00</b></span>
+      <span>Budget: <b id="budget-limit">—</b></span>
+      <span>Remaining: <b id="budget-remaining">—</b></span>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- ADD TRANSACTION FORM -->
+    <div class="form-card">
+      <h2 id="form-title">+ Add Transaction</h2>
+
+      <div class="form-group">
+        <label>Type</label>
+        <div class="type-toggle">
+          <button class="type-btn active income" data-type="income"  onclick="selectType('income')">Income</button>
+          <button class="type-btn expense"        data-type="expense" onclick="selectType('expense')">Expense</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Category</label>
+        <select id="category"></select>
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="description" placeholder="e.g. Grocery Run"/>
+      </div>
+
+      <div class="form-group">
+        <label>Amount ($)</label>
+        <input type="number" id="amount" placeholder="0.00" min="0.01" step="0.01"/>
+      </div>
+
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="date"/>
+      </div>
+
+      <button class="submit-btn" onclick="submitForm()">Add Transaction</button>
+      <button class="submit-btn" id="cancel-edit-btn" style="display:none;margin-top:8px;background:var(--border);color:var(--text);" onclick="cancelEdit()">Cancel Edit</button>
+    </div>
+
+    <!-- TRANSACTIONS TABLE -->
+    <div class="transactions-card">
+      <div class="transactions-header">
+        <h2>Transactions</h2>
+        <div class="filter-row">
+          <input type="month" id="month-filter" title="Filter by month"/>
+          <button class="clear-btn" onclick="clearFilter()">All</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="transactions-body">
+          <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <h3>Edit Transaction</h3>
+    <div class="form-group">
+      <label>Type</label>
+      <div class="type-toggle">
+        <button class="type-btn active income" data-type="income"  onclick="selectModalType('income')">Income</button>
+        <button class="type-btn expense"        data-type="expense" onclick="selectModalType('expense')">Expense</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="modal-category"></select>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <input type="text" id="modal-description"/>
+    </div>
+    <div class="form-group">
+      <label>Amount ($)</label>
+      <input type="number" id="modal-amount" min="0.01" step="0.01"/>
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="modal-date"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('edit-modal')">Cancel</button>
+      <button class="btn-confirm" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h3>Delete Transaction</h3>
+    <p style="color:var(--muted);font-size:0.8rem;margin-bottom:4px;">Are you sure you want to delete:</p>
+    <p style="font-size:0.9rem;margin-top:8px;" id="delete-description"></p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('delete-modal')">Cancel</button>
+      <button class="btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- SET BUDGET MODAL -->
+<div class="modal-overlay" id="budget-modal">
+  <div class="modal">
+    <h3>Set Monthly Budget</h3>
+    <div class="form-group">
+      <label>Month</label>
+      <input type="month" id="budget-month"/>
+    </div>
+    <div class="form-group">
+      <label>Budget Amount ($)</label>
+      <input type="number" id="budget-amount" min="1" step="1" placeholder="e.g. 2000"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('budget-modal')">Cancel</button>
+      <button class="btn-confirm" onclick="saveBudget()">Save Budget</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let categories = [];
+  let editingId  = null;
+  let deletingId = null;
+  let currentMonth = null;
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+  async function init() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    currentMonth = `${y}-${m}`;
+
+    document.getElementById('current-month-label').textContent = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+    document.getElementById('date').value = now.toISOString().split('T')[0];
+    document.getElementById('month-filter').value = currentMonth;
+    document.getElementById('budget-month').value  = currentMonth;
+
+    categories = await fetch('/api/categories').then(r => r.json());
+    populateSelect('category', categories);
+    populateSelect('modal-category', categories);
+
+    await refresh();
+  }
+
+  function populateSelect(id, cats) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  async function refresh() {
+    const month = document.getElementById('month-filter').value;
+    await Promise.all([
+      loadTransactions(month),
+      loadSummary(month),
+      loadBudget(currentMonth)
+    ]);
+  }
+
+  // ── TRANSACTIONS ──────────────────────────────────────────────────────────
+  async function loadTransactions(month) {
+    const url = month ? `/api/transactions?month=${month}` : '/api/transactions';
+    const data = await fetch(url).then(r => r.json());
+    const tbody = document.getElementById('transactions-body');
+
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">No transactions found</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(t => `
+      <tr>
+        <td>${t.date}</td>
+        <td><span class="badge ${t.type}">${t.type}</span></td>
+        <td><span class="cat-badge">${t.category}</span></td>
+        <td>${t.description}</td>
+        <td class="amount-cell ${t.type}">${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}</td>
+        <td>
+          <div class="action-btns">
+            <button class="action-btn" onclick="openEdit(${t.id})">edit</button>
+            <button class="action-btn del" onclick="openDelete(${t.id}, '${t.description}', ${t.amount})">del</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // ── SUMMARY ───────────────────────────────────────────────────────────────
+  async function loadSummary(month) {
+    const url = month ? `/api/summary?month=${month}` : '/api/summary';
+    const s = await fetch(url).then(r => r.json());
+
+    document.getElementById('stat-income').textContent   = fmt(s.total_income);
+    document.getElementById('stat-expenses').textContent = fmt(s.total_expenses);
+    document.getElementById('stat-balance').textContent  = fmt(s.balance);
+
+    const statusEl = document.getElementById('stat-status');
+    if (s.balance >= 0) {
+      statusEl.textContent = 'on track';
+      statusEl.className = 'tag';
+    } else {
+      statusEl.textContent = 'overspent';
+      statusEl.className = 'tag over';
+    }
+  }
+
+  // ── BUDGET ────────────────────────────────────────────────────────────────
+  async function loadBudget(month) {
+    const b = await fetch(`/api/budget/${month}`).then(r => r.json());
+    const bar = document.getElementById('budget-bar');
+    const pct = b.pct || 0;
+
+    document.getElementById('budget-spent').textContent     = fmt(b.spent);
+    document.getElementById('budget-limit').textContent     = b.budget ? fmt(b.budget) : '—';
+    document.getElementById('budget-remaining').textContent = b.remaining != null ? fmt(b.remaining) : '—';
+
+    if (b.budget) {
+      const displayPct = Math.min(pct, 100);
+      bar.style.width = `${displayPct}%`;
+      bar.className = 'budget-bar-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warning' : '');
+      const label = pct >= 100 ? `⚠️ Over budget! (${pct}%)` : pct >= 80 ? `⚠️ ${pct}% used` : `${pct}% used`;
+      document.getElementById('budget-pct-label').textContent = label;
+    } else {
+      bar.style.width = '0%';
+      document.getElementById('budget-pct-label').textContent = 'No budget set';
+    }
+  }
+
+  // ── FORM ──────────────────────────────────────────────────────────────────
+  let selectedType = 'income';
+
+  function selectType(type) {
+    selectedType = type;
+    document.querySelectorAll('.form-card .type-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.type === type);
+    });
+  }
+
+  async function submitForm() {
+    const payload = {
+      type:        selectedType,
+      category:    document.getElementById('category').value,
+      description: document.getElementById('description').value.trim(),
+      amount:      parseFloat(document.getElementById('amount').value),
+      date:        document.getElementById('date').value,
+    };
+
+    if (!payload.description) { showToast('Please enter a description', true); return; }
+    if (!payload.amount || payload.amount <= 0) { showToast('Please enter a valid amount', true); return; }
+
+    const res = await fetch('/api/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      showToast('Transaction added!');
+      document.getElementById('description').value = '';
+      document.getElementById('amount').value = '';
+      await refresh();
+    } else {
+      const err = await res.json();
+      showToast(err.error || 'Error adding transaction', true);
+    }
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    document.getElementById('form-title').textContent = '+ Add Transaction';
+    document.getElementById('cancel-edit-btn').style.display = 'none';
+    document.querySelector('.submit-btn').textContent = 'Add Transaction';
+  }
+
+  // ── EDIT MODAL ────────────────────────────────────────────────────────────
+  let modalSelectedType = 'income';
+
+  function selectModalType(type) {
+    modalSelectedType = type;
+    document.querySelectorAll('#edit-modal .type-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.type === type);
+    });
+  }
+
+  async function openEdit(id) {
+    const rows = await fetch('/api/transactions').then(r => r.json());
+    const t = rows.find(r => r.id === id);
+    if (!t) return;
+
+    editingId = id;
+    modalSelectedType = t.type;
+
+    selectModalType(t.type);
+    document.getElementById('modal-category').value    = t.category;
+    document.getElementById('modal-description').value = t.description;
+    document.getElementById('modal-amount').value      = t.amount;
+    document.getElementById('modal-date').value        = t.date;
+
+    document.getElementById('edit-modal').classList.add('open');
+  }
+
+  async function saveEdit() {
+    const payload = {
+      type:        modalSelectedType,
+      category:    document.getElementById('modal-category').value,
+      description: document.getElementById('modal-description').value.trim(),
+      amount:      parseFloat(document.getElementById('modal-amount').value),
+      date:        document.getElementById('modal-date').value,
+    };
+
+    const res = await fetch(`/api/transactions/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      closeModal('edit-modal');
+      showToast('Transaction updated!');
+      await refresh();
+    } else {
+      showToast('Error updating transaction', true);
+    }
+  }
+
+  // ── DELETE MODAL ──────────────────────────────────────────────────────────
+  function openDelete(id, description, amount) {
+    deletingId = id;
+    document.getElementById('delete-description').textContent =
+      `"${description}" — $${amount.toFixed(2)}`;
+    document.getElementById('delete-modal').classList.add('open');
+  }
+
+  async function confirmDelete() {
+    const res = await fetch(`/api/transactions/${deletingId}`, { method: 'DELETE' });
+    if (res.ok) {
+      closeModal('delete-modal');
+      showToast('Transaction deleted');
+      await refresh();
+    } else {
+      showToast('Error deleting transaction', true);
+    }
+  }
+
+  // ── BUDGET MODAL ──────────────────────────────────────────────────────────
+  document.getElementById('set-budget-btn').onclick = () => {
+    document.getElementById('budget-modal').classList.add('open');
+  };
+
+  async function saveBudget() {
+    const month  = document.getElementById('budget-month').value;
+    const amount = parseFloat(document.getElementById('budget-amount').value);
+
+    if (!month)            { showToast('Please select a month', true); return; }
+    if (!amount || amount <= 0) { showToast('Please enter a valid amount', true); return; }
+
+    const res = await fetch(`/api/budget/${month}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount })
+    });
+
+    if (res.ok) {
+      closeModal('budget-modal');
+      showToast(`Budget set for ${month}!`);
+      await loadBudget(currentMonth);
+    } else {
+      showToast('Error setting budget', true);
+    }
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  function clearFilter() {
+    document.getElementById('month-filter').value = '';
+    refresh();
+  }
+
+  document.getElementById('month-filter').addEventListener('change', refresh);
+
+  function fmt(n) {
+    return '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  // close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+  });
+
+  init();
+</script>
+</body>
+</html>
